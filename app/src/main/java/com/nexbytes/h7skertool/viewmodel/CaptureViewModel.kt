@@ -108,12 +108,23 @@ class CaptureViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(isVerifying=true, verifyError=null) }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val resp = http.newCall(Request.Builder().url("http://node.mrkalpha.tech:19140/password=$password").get().build()).execute()
-                val body = resp.body?.string() ?: ""
-                val ok = body.contains("\"result\":\"0\"")||body.contains("\"status\":\"ok\"")
-                if (ok) { session.setVerified(true, username=password); withContext(Dispatchers.Main) { _state.update { it.copy(isVerifying=false, verifyError=null) } } }
-                else withContext(Dispatchers.Main) { _state.update { it.copy(isVerifying=false, verifyError="Invalid password.") } }
-            } catch (e: Exception) { withContext(Dispatchers.Main) { _state.update { it.copy(isVerifying=false, verifyError="Network error: ${e.message}") } } }
+                val url = "http://node.mrkalpha.tech:19140/password=$password"
+                val response = http.newCall(Request.Builder().url(url).get().build()).execute()
+                val body = response.body?.string() ?: ""
+                Log.d(TAG, "Password API response: $body")
+
+                if (body.contains("\"result\":\"0\"") || body.contains("\"result\": \"0\"")) {
+                    session.setVerified(true, username = password)
+                    _state.update { it.copy(isVerifying = false, verifyError = null) }
+                    log(LogLevel.INFO, "Auth", "Verified successfully ✓")
+                } else {
+                    _state.update { it.copy(isVerifying = false, verifyError = "Invalid password. Access denied.") }
+                    log(LogLevel.WARNING, "Auth", "Verification failed — response: $body")
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isVerifying = false, verifyError = "Network error: ${e.message}") }
+                log(LogLevel.ERROR, "Auth", "Verification error: ${e.message}")
+            }
         }
     }
 
