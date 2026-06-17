@@ -32,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
-import okhttp3.Request as OkHttpRequest
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -80,7 +79,7 @@ fun RequestDetailScreen(
             try {
                 val url = if (mainTab == 0) "http://node.mrkalpha.tech:19140/request" else "http://node.mrkalpha.tech:19140/response"
                 val body = JSONObject().put("hex",hex).toString().toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-                val resp = withContext(Dispatchers.IO) { http.newCall(OkHttpRequest.Builder().url(url).post(body).build()).execute() }
+                val resp = withContext(Dispatchers.IO) { http.newCall(okhttp3.Request.Builder().url(url).post(body).build()).execute() }
                 val rawBody = withContext(Dispatchers.IO) { resp.body?.string() }
                 withContext(Dispatchers.Main) { isSplitDecoding = false; splitDecoded = parseDecodeApiResponse(rawBody) }
             } catch (e: Exception) { withContext(Dispatchers.Main) { isSplitDecoding = false; splitError = "Decode failed: ${e.message}" } }
