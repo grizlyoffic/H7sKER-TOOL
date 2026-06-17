@@ -62,9 +62,7 @@ fun RequestDetailScreen(
     val http = remember { OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(30,TimeUnit.SECONDS).build() }
 
     var mainTab by remember { mutableIntStateOf(0) }
-    // subTab: 0=BODY 1=HEADERS 2=HEX
     var subTab by remember { mutableIntStateOf(0) }
-    // FIX #1: overlay only launched from HEX subTab
     var showDecodeOverlay by remember { mutableStateOf(false) }
     var splitDecoded by remember { mutableStateOf<String?>(null) }
     var isSplitDecoding by remember { mutableStateOf(false) }
@@ -97,15 +95,26 @@ fun RequestDetailScreen(
                     Column {
                         Text(request.endpoint, color = TextBright, fontFamily = FontFamily.Monospace, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(request.method, color = when(request.method){"GET"->MethodGET;"POST"->MethodPOST;"PUT"->MethodPUT;"DELETE"->MethodDELETE;else->TextSecondary}, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                            response?.let { r -> Text("${r.statusCode}", color = when{r.statusCode in 200..299->NeonGreen;r.statusCode in 400..499->Amber;else->AlertRed}, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                                Text("${r.durationMs}ms", color = TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+                            Text(request.method, color = when(request.method) {
+                                "GET" -> MethodGET
+                                "POST" -> MethodPOST
+                                "PUT" -> MethodPUT
+                                "DELETE" -> MethodDELETE
+                                else -> TextSecondary
+                            }, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                            response?.let { r ->
+                                Text("${r.statusCode}", color = when {
+                                    r.statusCode in 200..299 -> NeonGreen
+                                    r.statusCode in 400..499 -> Amber
+                                    else -> AlertRed
+                                }, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                                Text("${r.durationMs}ms", color = TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            }
                         }
                     }
                 },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = TextPrimary) } },
                 actions = {
-                    // FIX #1: only show decode buttons in HEX sub-tab
                     if (subTab == 2) {
                         IconButton(onClick = { showDecodeOverlay = true }) {
                             Icon(Icons.Default.Code, "Open decode overlay", tint = Amber)
@@ -115,7 +124,6 @@ fun RequestDetailScreen(
                             else Icon(Icons.Default.VerticalSplit, "Split", tint = ElectricBlue)
                         }
                     }
-                    // MOD always available
                     IconButton(onClick = {
                         val body = if (mainTab == 0) request.bodyText ?: "" else response?.bodyText ?: ""
                         onSaveMod(request.endpoint, body); snack = "Mod saved!"
@@ -180,9 +188,12 @@ private fun DetailBody(
     }
     HorizontalDivider(color=DividerGray,thickness=0.5.dp)
 
-    // Action row — no decode here at all (Fix #1)
     Row(Modifier.fillMaxWidth().background(ElevatedBlack).padding(horizontal=10.dp,vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-        val content = when(subTab){1->if(isReq)request.headersAsString() else response?.headersAsString()?:"";2->if(isReq)request.body?.let{HexUtils.toHexDump(it)}?:"" else response?.body?.let{HexUtils.toHexDump(it)}?:"";else->if(isReq)request.bodyText?:"" else response?.bodyText?:""}
+        val content = when(subTab){
+            1->if(isReq)request.headersAsString() else response?.headersAsString()?:""
+            2->if(isReq)request.body?.let{HexUtils.toHexDump(it)}?:"" else response?.body?.let{HexUtils.toHexDump(it)}?:""
+            else->if(isReq)request.bodyText?:"" else response?.bodyText?:""
+        }
         TextButton(onClick={clipboard.setText(AnnotatedString(content));onSnack("Copied!")},colors=ButtonDefaults.textButtonColors(contentColor=NeonGreen)){Icon(Icons.Default.ContentCopy,null,modifier=Modifier.size(13.dp));Spacer(Modifier.width(4.dp));Text("Copy",fontSize=11.sp)}
         if(isReq&&subTab==0&&(request.bodyText?.isNotEmpty()==true)){
             TextButton(onClick={onSaveMod(request.endpoint,request.bodyText??"");onSnack("Mod saved!")},colors=ButtonDefaults.textButtonColors(contentColor=NeonGreen)){Icon(Icons.Default.Save,null,modifier=Modifier.size(13.dp));Spacer(Modifier.width(4.dp));Text("Save Mod",fontSize=11.sp)}
@@ -190,7 +201,16 @@ private fun DetailBody(
     }
     HorizontalDivider(color=DividerGray,thickness=0.5.dp)
 
-    val displayContent = when(subTab){1->if(isReq)request.headersAsString() else response?.headersAsString()??"(no response)";2->if(isReq)request.body?.let{HexUtils.toHexDump(it)}??"(no hex)" else response?.body?.let{HexUtils.toHexDump(it)}??"(no hex)";else->if(isReq)request.bodyText??"(empty)" else response?.bodyText??"(waiting…)"}
-    val textColor = when{subTab==2->Amber.copy(0.85f);subTab==1->TextSecondary;isReq->NeonGreen.copy(0.9f);else->ElectricBlue.copy(0.9f)}
+    val displayContent = when(subTab){
+        1->if(isReq)request.headersAsString() else response?.headersAsString()?:"(no response)"
+        2->if(isReq)request.body?.let{HexUtils.toHexDump(it)}?:"(no hex)" else response?.body?.let{HexUtils.toHexDump(it)}?:"(no hex)"
+        else->if(isReq)request.bodyText?:"(empty)" else response?.bodyText?:"(waiting…)"
+    }
+    val textColor = when{
+        subTab==2->Amber.copy(0.85f)
+        subTab==1->TextSecondary
+        isReq->NeonGreen.copy(0.9f)
+        else->ElectricBlue.copy(0.9f)
+    }
     Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp)){Text(displayContent,color=textColor,fontSize=11.sp,fontFamily=FontFamily.Monospace,lineHeight=17.sp)}
 }
