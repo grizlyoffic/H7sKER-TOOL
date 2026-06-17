@@ -35,7 +35,6 @@ import com.nexbytes.h7skertool.utils.ExportUtils
 import com.nexbytes.h7skertool.utils.ModFile
 import com.nexbytes.h7skertool.viewmodel.AppUiState
 
-// FIX #1: No decode button anywhere in the capture list — decode lives in RequestDetailScreen HEX tab only
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainCaptureScreen(
@@ -80,11 +79,21 @@ fun MainCaptureScreen(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = CardBlack)
                 )
                 OutlinedTextField(
-                    value = state.searchQuery, onValueChange = onSearch,
+                    value = state.searchQuery,
+                    onValueChange = onSearch,
                     modifier = Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=6.dp).height(46.dp),
                     placeholder = { Text("Search endpoints, bodies…", color = TextDim, fontSize = 12.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary, modifier = Modifier.size(18.dp)) },
-                    trailingIcon = { if (state.searchQuery.isNotEmpty()) IconButton(onClick={onSearch("")},modifier=Modifier.size(28.dp)){Icon(Icons.Default.Clear,null,tint=TextSecondary,modifier=Modifier.size(16.dp))} },
+                    trailingIcon = {
+                        if (state.searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = { onSearch("") },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(Icons.Default.Clear, null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor=NeonGreen, unfocusedBorderColor=DividerGray, focusedTextColor=TextBright, unfocusedTextColor=TextPrimary, cursorColor=NeonGreen),
                     textStyle = LocalTextStyle.current.copy(fontFamily=FontFamily.Monospace,fontSize=12.sp),
@@ -112,10 +121,10 @@ fun MainCaptureScreen(
                 0 -> CaptureList(
                     requests = state.filteredRequests,
                     responses = state.responses,
-                    onTapItem = onNavigateToDetail,        // → goes to detail where HEX tab has decode
+                    onTapItem = onNavigateToDetail,
                     onCopyReq = { req -> clipboard.setText(AnnotatedString(ExportUtils.buildRequestText(req))); snack="Request copied!" },
                     onCopyRes = { req -> state.responses[req.id]?.let{clipboard.setText(AnnotatedString(ExportUtils.buildResponseText(req,it)));snack="Response copied!"} },
-                    onSaveMod = { req -> onSaveMod(req.endpoint,req.bodyText??"");snack="Mod saved!" }
+                    onSaveMod = { req -> onSaveMod(req.endpoint,req.bodyText?:"");snack="Mod saved!" }
                 )
                 1 -> LogViewer(logs=state.logs, onClear=onClearLogs)
             }
@@ -174,7 +183,7 @@ private fun CaptureList(requests: List<CapturedRequest>, responses: Map<String,C
                     onTap={onTapItem(req)},
                     onCopyRequest={onCopyReq(req)},
                     onCopyResponse={onCopyRes(req)},
-                    onOpenDecode={onTapItem(req)},   // → navigate to detail, switch to HEX tab there
+                    onOpenDecode={onTapItem(req)},
                     onSaveMod={onSaveMod(req)}
                 )
             }
